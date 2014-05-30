@@ -184,9 +184,9 @@
 }
 
 // example of UIScrollView events handling
-- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
-    // NSLog(@"scrollViewDidScroll");
+    NSLog(@"scrollViewDidEndDragging");
 }
 
 @end
