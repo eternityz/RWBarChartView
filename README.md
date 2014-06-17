@@ -30,7 +30,11 @@ See `RWBarChartView.h` and the demo project.
 
 ## Installation
 
-Clone this repo, place `RWBarChartView.h` and `RWBarChartView.m` into your project.
+- Add `pod RWBarChartView` into your `Podfile`;
+
+or
+
+- Clone this repo, place `RWBarChartView.h` and `RWBarChartView.m` into your project.
 
 ## License
 MIT License
