@@ -24,6 +24,10 @@ A scrollable, highly customizable and easy to use charting view for bar graphs. 
 
 Build and run the RWBarChartViewDemo project in Xcode.
 
+## Usage
+
+See `RWBarChartView.h` and the demo project.
+
 ## Installation
 
 Clone this repo, place `RWBarChartView.h` and `RWBarChartView.m` into your project.
