@@ -30,7 +30,7 @@ See `RWBarChartView.h` and the demo project.
 
 ## Installation
 
-- Add `pod RWBarChartView` into your `Podfile`;
+- Add `pod 'RWBarChartView'` into your `Podfile`;
 
 or
 
