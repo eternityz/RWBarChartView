@@ -22,6 +22,8 @@
 @property (nonatomic, assign) CGFloat needleLength;
 @property (nonatomic, assign) CGFloat needlePadding;
 @property (nonatomic, assign) CGFloat lastSectionGap;
+@property (nonatomic, assign) CGFloat leftIndicatorPadding;
+@property (nonatomic, assign) CGFloat rightIndicatorPadding;
 @property (nonatomic, strong) NSMutableDictionary *sectionTitleSizeCache; // @(section) -> NSValue with CGSize
 @property (nonatomic, strong) NSCache *itemCache;
 
@@ -113,6 +115,10 @@
 
 - (CGFloat)leftIndicatorPadding
 {
+    if (_leftIndicatorPadding >= 0)
+    {
+        return _leftIndicatorPadding;
+    }
     CGFloat padding = 0;
     
     if ([self.dataSource numberOfSectionsInBarChartView:self] <= 0)
@@ -131,11 +137,18 @@
     
     padding = MAX(padding, textSize.width / 2);
     
-    return padding;
+    _leftIndicatorPadding = padding;
+    
+    return _leftIndicatorPadding;
 }
 
 - (CGFloat)rightIndicatorPadding
 {
+    if (_rightIndicatorPadding >= 0)
+    {
+        return _rightIndicatorPadding;
+    }
+    
     CGFloat padding = 0; // CGRectGetWidth(self.bounds) / 3.0;
     
     
@@ -157,7 +170,8 @@
     
     padding = MAX(padding, textSize.width / 2);
     
-    return padding;
+    _rightIndicatorPadding = padding;
+    return _rightIndicatorPadding;
 }
 
 - (void)reloadData
@@ -178,6 +192,8 @@
     // will be updated on demand
     self.sectionTitleAreaHeight = -HUGE_VALF;
     self.itemTextAreaHeight = -HUGE_VALF;
+    self.leftIndicatorPadding = -HUGE_VALF;
+    self.rightIndicatorPadding = -HUGE_VALF;
     
     self.sectionTitleSizeCache = [NSMutableDictionary dictionary];
     

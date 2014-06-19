@@ -33,7 +33,7 @@
         NSMutableDictionary *statItems = [NSMutableDictionary dictionary];
         
         // make sample values
-        for (NSInteger isec = 0; isec < 4; ++isec)
+        for (NSInteger isec = 0; isec < 5; ++isec)
         {
             NSInteger n = random() % 30 + 1;
             [itemCounts addObject:@(n)];
