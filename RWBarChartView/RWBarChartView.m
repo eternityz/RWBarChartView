@@ -18,7 +18,10 @@
 @property (nonatomic, assign) CGFloat itemTextVerticalMargin;
 @property (nonatomic, assign) CGFloat itemTextAreaHeight;
 @property (nonatomic, assign) CGFloat contentHorizontalMargin;
+@property (nonatomic, assign) CGFloat fadingAreaWidth;
 @property (nonatomic, assign) CGFloat needleLength;
+@property (nonatomic, assign) CGFloat needlePadding;
+@property (nonatomic, assign) CGFloat lastSectionGap;
 @property (nonatomic, strong) NSMutableDictionary *sectionTitleSizeCache; // @(section) -> NSValue with CGSize
 @property (nonatomic, strong) NSCache *itemCache;
 
@@ -41,11 +44,13 @@
     self.itemTextHorizontalMargin = 10;
     self.itemTextVerticalMargin = 2;
     self.itemTextBackgroundColor = [UIColor whiteColor];
+    self.lastSectionGap = 0;
     self.axisFont = [UIFont systemFontOfSize:10];
     self.axisColor = [UIColor whiteColor];
     self.sectionTitleSizeCache = [NSMutableDictionary dictionary];
     self.contentHorizontalMargin = 5;
     self.needleLength = 5;
+    self.needlePadding = 2;
     self.itemCache = [NSCache new];
 }
 
@@ -106,18 +111,77 @@
     return titleSize.width + 2 * self.sectionTitleTextHorizontalMargin + 1;
 }
 
+- (CGFloat)leftIndicatorPadding
+{
+    CGFloat padding = 0;
+    
+    if ([self.dataSource numberOfSectionsInBarChartView:self] <= 0)
+    {
+        return padding;
+    }
+    
+    if ([self.dataSource barChartView:self numberOfBarsInSection:0] <= 0)
+    {
+        return padding;
+    }
+    
+    NSIndexPath *indexPath = [NSIndexPath indexPathForItem:0 inSection:0];
+    id<RWBarChartItemProtocol> lastItem = [self.dataSource barChartView:self barChartItemAtIndexPath:indexPath];
+    CGSize textSize = [self highlightTextSizeForText:[lastItem text]];
+    
+    padding = MAX(padding, textSize.width / 2);
+    
+    return padding;
+}
+
+- (CGFloat)rightIndicatorPadding
+{
+    CGFloat padding = 0; // CGRectGetWidth(self.bounds) / 3.0;
+    
+    
+    // last item size
+    NSInteger section = [self.dataSource numberOfSectionsInBarChartView:self] - 1;
+    if (section < 0)
+    {
+        return padding;
+    }
+    NSInteger item = [self.dataSource barChartView:self numberOfBarsInSection:section] - 1;
+    if (item < 0)
+    {
+        return padding;
+    }
+    
+    NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
+    id<RWBarChartItemProtocol> lastItem = [self.dataSource barChartView:self barChartItemAtIndexPath:indexPath];
+    CGSize textSize = [self highlightTextSizeForText:[lastItem text]];
+    
+    padding = MAX(padding, textSize.width / 2);
+    
+    return padding;
+}
+
 - (void)reloadData
 {
+    self.showsHorizontalScrollIndicator = ![self.dataSource shouldShowItemTextForBarChartView:self];
     [self.itemCache removeAllObjects];
+    
+    NSArray *unused = nil;
+    if ([self.dataSource barChartView:self shouldShowAxisAtRatios:&unused withLabels:&unused])
+    {
+        self.fadingAreaWidth = 50;
+    }
+    else
+    {
+        self.fadingAreaWidth = 0;
+    }
     
     // will be updated on demand
     self.sectionTitleAreaHeight = -HUGE_VALF;
     self.itemTextAreaHeight = -HUGE_VALF;
     
-    // calculate content size
     self.sectionTitleSizeCache = [NSMutableDictionary dictionary];
     
-    CGFloat width = 0;
+    CGFloat width = [self leftIndicatorPadding] + self.fadingAreaWidth;
     NSMutableArray *sectionRects = [NSMutableArray array];
     for (NSInteger isec = 0; isec < [self.dataSource numberOfSectionsInBarChartView:self]; ++isec)
     {
@@ -128,13 +192,24 @@
             secWidth += (nItems - 1) * [self barPadding];
         }
         
-        secWidth = MAX(secWidth, [self headerWidthInSection:isec]) + 1.0;
+        CGFloat headerWidth = [self headerWidthInSection:isec];
+        
+        if (isec == [self.dataSource numberOfSectionsInBarChartView:self] - 1)
+        {
+            self.lastSectionGap = MAX(headerWidth - secWidth, 0);
+        }
+        
+        secWidth = MAX(secWidth, headerWidth) + 1.0;
         
         CGRect sectionRect = CGRectMake(width, 0, secWidth, self.bounds.size.height);
         [sectionRects addObject:[NSValue valueWithCGRect:sectionRect]];
         
         width += secWidth;
+        
     }
+    
+    width += [self rightIndicatorPadding];
+    
     self.sectionRects = sectionRects;
     
     self.contentSize = CGSizeMake(width, self.bounds.size.height);
@@ -172,7 +247,7 @@
 {
     if (_sectionTitleAreaHeight < 0)
     {
-        _sectionTitleAreaHeight = self.sectionTitleFont.lineHeight + 2 * self.sectionTitleTextVerticalMargin + 2;
+        _sectionTitleAreaHeight = self.sectionTitleFont.lineHeight + 2 * self.sectionTitleTextVerticalMargin + self.axisFont.lineHeight;
     }
     
     return _sectionTitleAreaHeight;
@@ -180,24 +255,13 @@
 
 - (CGFloat)highlightPositionX
 {
-    CGFloat x = CGRectGetMaxX(self.bounds) - self.barWidth / 2.0 - self.contentHorizontalMargin;
+    CGFloat w = CGRectGetWidth(self.bounds);
+    CGFloat progress = self.bounds.origin.x / (self.contentSize.width - w);
     
-    NSInteger lastSection = [self.dataSource numberOfSectionsInBarChartView:self] - 1;
-    if (lastSection >= 0)
-    {
-        NSInteger lastItem = [self.dataSource barChartView:self numberOfBarsInSection:lastSection] - 1;
-        if (lastItem >= 0)
-        {
-            CGRect rect = [self frameForBarAtIndexPath:[NSIndexPath indexPathForItem:lastItem inSection:lastSection]];
-            
-            x = MIN(x, CGRectGetMidX(rect));
-        }
-    }
+    CGFloat x = self.bounds.origin.x + self.fadingAreaWidth + self.contentHorizontalMargin + [self leftIndicatorPadding] + self.barWidth / 2.0 + (w - self.lastSectionGap - [self rightIndicatorPadding] - [self leftIndicatorPadding] - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) * progress;
     
-    if (self.bounds.origin.x < 0)
-    {
-        x += self.bounds.origin.x * 2.5;
-    }
+    // x = MAX(x, [self leftIndicatorPadding] + self.barWidth / 2.0);
+    // x = MIN(x, self.contentSize.width - [self rightIndicatorPadding] - self.barWidth / 2.0 - self.lastSectionGap);
     
     return x;
 }
@@ -211,7 +275,7 @@
     
     if ([self.dataSource shouldShowItemTextForBarChartView:self])
     {
-        _itemTextAreaHeight = self.itemTextFont.lineHeight + 2 * self.itemTextVerticalMargin + self.needleLength;
+        _itemTextAreaHeight = self.itemTextFont.lineHeight + 2 * self.itemTextVerticalMargin + self.needleLength + self.needlePadding;
     }
     else
     {
@@ -228,8 +292,8 @@
     CGRect rect = CGRectZero;
     rect.size.width = self.barWidth;
     rect.origin.x = sectionRect.origin.x + (rect.size.width + [self barPadding]) * indexPath.item;
-    rect.origin.y = [self itemTextAreaHeight];
-    rect.size.height = self.bounds.size.height - rect.origin.y - [self sectionTitleAreaHeight];
+    rect.origin.y = [self sectionTitleAreaHeight]; // [self itemTextAreaHeight];
+    rect.size.height = self.bounds.size.height - rect.origin.y - [self itemTextAreaHeight]; // [self sectionTitleAreaHeight];
     
     return rect;
 }
@@ -245,8 +309,45 @@
     return item;
 }
 
-- (void)drawBarsForSection:(NSInteger)isec inRect:(CGRect)rect context:(CGContextRef)ctx
+- (void)addRoundedRect:(CGRect)rect withRadius:(CGFloat)radius context:(CGContextRef)ctx
 {
+    CGFloat minX = CGRectGetMinX(rect);
+    CGFloat maxX = CGRectGetMaxX(rect);
+    CGFloat minY = CGRectGetMinY(rect);
+    CGFloat maxY = CGRectGetMaxY(rect);
+    
+    CGContextMoveToPoint(ctx, minX + radius, minY);
+    CGContextAddArcToPoint(ctx, maxX, minY, maxX, minY + radius, radius);
+    CGContextAddArcToPoint(ctx, maxX, maxY, maxX - radius, maxY, radius);
+    CGContextAddArcToPoint(ctx, minX, maxY, minX, maxY - radius, radius);
+    CGContextAddArcToPoint(ctx, minX, minY, minX + radius, minY, radius);
+}
+
+- (CGFloat)alphaForBarAtRect:(CGRect)rect
+{
+    CGFloat alpha = 1.0;
+    
+    NSArray *unused = nil;
+    if (![self.dataSource barChartView:self shouldShowAxisAtRatios:&unused withLabels:&unused])
+    {
+        return alpha;
+    }
+    
+    CGFloat left = CGRectGetMinX(rect);
+    alpha = MIN(alpha, (left - self.bounds.origin.x) / self.fadingAreaWidth);
+    
+    // CGFloat right = CGRectGetMaxX(rect);
+    // CGFloat w = CGRectGetWidth(self.bounds);
+    // alpha = MIN(alpha, (self.bounds.origin.x + w - right) / self.fadingAreaWidth);
+    
+    alpha = 0.2 + alpha * 0.8;
+    
+    return alpha;
+}
+
+- (void)drawBarsForSection:(NSInteger)isec inRect:(CGRect)rect context:(CGContextRef)ctx didDrawHighlight:(out BOOL *)didDrawHighlight
+{
+    *didDrawHighlight = NO;
     for (NSInteger irow = 0; irow < [self.dataSource barChartView:self numberOfBarsInSection:isec]; ++irow)
     {
         NSIndexPath *indexPath = [NSIndexPath indexPathForItem:irow inSection:isec];
@@ -269,8 +370,18 @@
             
             CGFloat h = barFrame.size.height * ratio;
             
-            CGContextSetFillColorWithColor(ctx, color.CGColor);
-            CGContextFillRect(ctx, CGRectMake(x, y - h, w, h));
+            CGRect rect = CGRectMake(x, y - h, w, h);
+            
+            CGContextSetFillColorWithColor(ctx, [color colorWithAlphaComponent:[self alphaForBarAtRect:rect]].CGColor);
+            
+            CGContextFillRect(ctx, rect);
+            
+            /*
+            CGContextBeginPath(ctx);
+            [self addRoundedRect:rect withRadius:w / 4 context:ctx];
+            CGContextClosePath(ctx);
+            CGContextFillPath(ctx);
+             */
             
             y -= h;
         }
@@ -278,16 +389,28 @@
         if ([self.dataSource shouldShowItemTextForBarChartView:self])
         {
             CGFloat highlightX = [self highlightPositionX];
-            if (x <= highlightX && x + w + self.barPadding >= highlightX)
+            NSString *text = nil;
+            if (
+                (x <= highlightX && x + w + self.barPadding >= highlightX) // needle inside bar
+                || (x >= highlightX && isec == 0 && irow == 0) // first bar
+                || (x + w + self.barPadding < highlightX
+                    && isec == [self.dataSource numberOfSectionsInBarChartView:self] - 1
+                    && irow == [self.dataSource barChartView:self numberOfBarsInSection:isec] - 1
+                    ) // last bar
+                )
             {
                 CGRect highlightRect = barFrame;
                 highlightRect.origin.y = y;
                 highlightRect.size.height -= (y - CGRectGetMinY(barFrame));
                 
-                [self drawHighlightTextForItemAtIndexPath:indexPath withRealBarFrame:highlightRect inRect:rect context:ctx];
+                text = [[self.dataSource barChartView:self barChartItemAtIndexPath:indexPath] text];
+                [self drawHighlightText:text withRealBarFrame:highlightRect inRect:rect context:ctx];
+                *didDrawHighlight = YES;
             }
+            
         }
     }
+    
 }
 
 - (void)drawTitleForSection:(NSInteger)isec inRect:(CGRect)rect context:(CGContextRef)ctx
@@ -298,8 +421,8 @@
         return;
     }
     
-    CGFloat titleAreaH = [self sectionTitleAreaHeight];
-    CGFloat titleAreaY = CGRectGetMaxY(sectionRect) - titleAreaH + 2;
+    CGFloat titleAreaH = [self sectionTitleAreaHeight] - self.axisFont.lineHeight;
+    CGFloat titleAreaY = 0; // CGRectGetMaxY(sectionRect) - titleAreaH + 2;
     
     // draw separator line
     {
@@ -324,15 +447,20 @@
     }
 }
 
-- (void)drawHighlightTextForItemAtIndexPath:(NSIndexPath *)indexPath withRealBarFrame:(CGRect)barFrame inRect:(CGRect)rect context:(CGContextRef)ctx
+- (NSDictionary *)highlightTextAttr
+{
+    NSDictionary *attr = @{NSFontAttributeName:self.itemTextFont, NSForegroundColorAttributeName:self.itemTextColor};
+    return attr;
+}
+
+- (CGSize)highlightTextSizeForText:(NSString *)text
+{
+    return [text sizeWithAttributes:[self highlightTextAttr]];
+}
+
+- (void)drawHighlightText:(NSString *)text withRealBarFrame:(CGRect)barFrame inRect:(CGRect)rect context:(CGContextRef)ctx
 {
     if (![self.dataSource shouldShowItemTextForBarChartView:self])
-    {
-        return;
-    }
-    
-    id<RWBarChartItemProtocol> item = [self.dataSource barChartView:self barChartItemAtIndexPath:indexPath];
-    if (![item text])
     {
         return;
     }
@@ -340,56 +468,32 @@
     CGContextSetStrokeColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
     CGContextStrokeRect(ctx, barFrame);
     
-    NSDictionary *attr = @{NSFontAttributeName:self.itemTextFont, NSForegroundColorAttributeName:self.itemTextColor};
+    
+    CGSize textSize = [self highlightTextSizeForText:text];
+    
+    CGPoint needle = CGPointMake([self highlightPositionX], CGRectGetMaxY(rect) - [self itemTextAreaHeight] + self.needlePadding);
     
     CGRect bgRect = CGRectZero;
-    CGSize textSize = [[item text] sizeWithAttributes:attr];
     bgRect.size.width = textSize.width + 2 * self.itemTextHorizontalMargin;
-    bgRect.origin.x = [self highlightPositionX] + self.barWidth / 2.0 - bgRect.size.width;
-    bgRect.origin.y = CGRectGetMinY(rect);
-    bgRect.size.height = [self itemTextAreaHeight] - self.needleLength;
+    bgRect.origin.x = needle.x - bgRect.size.width / 2.0;
+    bgRect.origin.y = needle.y + self.needleLength;
+    bgRect.size.height = [self itemTextAreaHeight] - self.needleLength - self.needlePadding;
     
-    CGPoint needle = CGPointZero;
     
-// #define RIGHT_TRIANGLE
-#ifdef RIGHT_TRIANGLE
-    // triangle points rightwards
-    bgRect.origin.x -= self.barWidth;
     CGContextBeginPath(ctx);
-    CGContextMoveToPoint(ctx, CGRectGetMinX(bgRect), CGRectGetMinY(bgRect));
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(bgRect), CGRectGetMinY(bgRect));
-    needle = CGPointMake(CGRectGetMaxX(bgRect) + self.needleLength, CGRectGetMidY(bgRect));
-    CGContextAddLineToPoint(ctx, needle.x, needle.y);
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(bgRect), CGRectGetMaxY(bgRect));
-    CGContextAddLineToPoint(ctx, CGRectGetMinX(bgRect), CGRectGetMaxY(bgRect));
-    CGContextClosePath(ctx);
-    CGContextSetFillColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
-    CGContextFillPath(ctx);
-#else
-    // triangle points downwards
-    CGContextBeginPath(ctx);
-    CGContextMoveToPoint(ctx, CGRectGetMinX(bgRect), CGRectGetMinY(bgRect));
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(bgRect), CGRectGetMinY(bgRect));
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(bgRect), CGRectGetMaxY(bgRect));
-    needle = CGPointMake(CGRectGetMaxX(bgRect) - self.barWidth / 2.0, CGRectGetMaxY(bgRect) + self.needleLength);
-    CGContextAddLineToPoint(ctx, needle.x, needle.y);
-    CGContextAddLineToPoint(ctx, CGRectGetMaxX(bgRect) - self.barWidth, CGRectGetMaxY(bgRect));
-    CGContextAddLineToPoint(ctx, CGRectGetMinX(bgRect), CGRectGetMaxY(bgRect));
-    CGContextClosePath(ctx);
-    CGContextSetFillColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
-    CGContextFillPath(ctx);
-#endif
     
-#ifdef RIGHT_TRIANGLE
-    CGContextBeginPath(ctx);
     CGContextMoveToPoint(ctx, needle.x, needle.y);
-    CGContextAddLineToPoint(ctx, needle.x, CGRectGetMinY(barFrame));
-    CGContextClosePath(ctx);
-    CGContextSetStrokeColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
-    CGContextStrokePath(ctx);
-#endif
+    CGContextAddLineToPoint(ctx, needle.x - self.barWidth / 2.0, needle.y + self.needleLength);
+    CGContextAddLineToPoint(ctx, needle.x + self.barWidth / 2.0, needle.y + self.needleLength);
+    CGContextAddLineToPoint(ctx, needle.x, needle.y);
     
-    [[item text] drawAtPoint:CGPointMake(CGRectGetMinX(bgRect) + self.itemTextHorizontalMargin, CGRectGetMinY(bgRect) + (bgRect.size.height - textSize.height) / 2.0) withAttributes:attr];
+    [self addRoundedRect:bgRect withRadius:3.0 context:ctx];
+    
+    CGContextClosePath(ctx);
+    CGContextSetFillColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
+    CGContextFillPath(ctx);
+    
+    [text drawAtPoint:CGPointMake(CGRectGetMinX(bgRect) + self.itemTextHorizontalMargin, CGRectGetMinY(bgRect) + (bgRect.size.height - textSize.height) / 2.0) withAttributes:[self highlightTextAttr]];
 }
 
 - (void)drawAxisInRect:(CGRect)rect context:(CGContextRef)ctx
@@ -408,8 +512,8 @@
     
     NSDictionary *attrs = @{NSFontAttributeName:self.axisFont, NSForegroundColorAttributeName:self.axisColor};
     
-    CGFloat y = [self itemTextAreaHeight];
-    CGFloat h = self.bounds.size.height - y - [self sectionTitleAreaHeight];
+    CGFloat y = [self sectionTitleAreaHeight];
+    CGFloat h = self.bounds.size.height - y - [self itemTextAreaHeight];
     
     for (NSInteger idx = 0; idx < axisRatios.count; ++idx)
     {
@@ -437,10 +541,20 @@
     {
         return;
     }
+    BOOL didDrawHighlight = NO;
     for (NSInteger isec = visibleSections.location; isec < visibleSections.location + visibleSections.length; ++isec)
     {
+        BOOL currDidDrawHighlight = NO;
         [self drawTitleForSection:isec inRect:rect context:ctx];
-        [self drawBarsForSection:isec inRect:rect context:ctx];
+        [self drawBarsForSection:isec inRect:rect context:ctx didDrawHighlight:&currDidDrawHighlight];
+        if (currDidDrawHighlight)
+        {
+            didDrawHighlight = YES;
+        }
+    }
+    if (!didDrawHighlight)
+    {
+        [self drawHighlightText:@"N/A" withRealBarFrame:CGRectZero inRect:self.bounds context:ctx];
     }
 }
 

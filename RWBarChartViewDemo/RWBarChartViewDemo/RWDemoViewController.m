@@ -33,7 +33,7 @@
         NSMutableDictionary *statItems = [NSMutableDictionary dictionary];
         
         // make sample values
-        for (NSInteger isec = 0; isec < 10; ++isec)
+        for (NSInteger isec = 0; isec < 4; ++isec)
         {
             NSInteger n = random() % 30 + 1;
             [itemCounts addObject:@(n)];
@@ -87,6 +87,7 @@
                                         [UIColor colorWithRed:1.0 green:1.0 blue:0.5 alpha:1.0],
                                         [UIColor colorWithRed:1.0 green:0.5 blue:0.5 alpha:1.0]
                                         ];
+                    statItem.text = [NSString stringWithFormat:@"Text %ld-%ld ", (long)indexPath.section, (long)indexPath.item];
                     statItems[indexPath] = statItem;
                 }
             }
@@ -150,6 +151,13 @@
 
 - (NSInteger)barChartView:(RWBarChartView *)barChartView numberOfBarsInSection:(NSInteger)section
 {
+    /*
+    if (section == self.itemCounts.count - 1)
+    {
+        return 1;
+    }
+     */
+    
     return [self.itemCounts[section] integerValue];
 }
 
@@ -167,7 +175,7 @@
 
 - (BOOL)shouldShowItemTextForBarChartView:(RWBarChartView *)barChartView
 {
-    return barChartView == self.singleChartView;
+    return YES; // barChartView == self.singleChartView;
 }
 
 - (BOOL)barChartView:(RWBarChartView *)barChartView shouldShowAxisAtRatios:(out NSArray *__autoreleasing *)axisRatios withLabels:(out NSArray *__autoreleasing *)axisLabels
