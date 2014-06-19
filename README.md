@@ -5,10 +5,10 @@ A scrollable, highly customizable and easy to use charting view for bar graphs. 
 
 <br />
 <p align="center">
-    <img src="https://raw.github.com/eternityz/RWBarChartView/master/Screenshots/screenshot.jpg">
+    <img src="https://raw.github.com/eternityz/RWBarChartView/master/Screenshots/screenshot.jpg" />
 </p>
 <p align="center">
-    <img src="https://raw.github.com/eternityz/RWBarChartView/master/Screenshots/demo.gif">
+    <img src="https://raw.github.com/eternityz/RWBarChartView/master/Screenshots/demo.gif" />
 </p>
 
 [Demo Video](http://zhangbin.cc/assets/2014-06-19-RWBarChartView/demo.mp4)
