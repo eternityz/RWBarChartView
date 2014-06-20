@@ -9,6 +9,10 @@ A scrollable, highly customizable and easy to use charting view for bar graphs. 
 
 [Demo Video](http://zhangbin.cc/assets/2014-06-19-RWBarChartView/demo.mp4)
 
+<video controls="controls" preload="auto" width="326" height="576" >
+<source src="{{ site.baseurl }}assets/2014-06-19-RWBarChartView/demo.mp4" type="video/mp4">
+</video>
+
 ## Features
 
 - Bars can be organized into sections. Section titles can be displayed stationarily while scrolling (like plain UITableView).
