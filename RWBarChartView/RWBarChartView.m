@@ -237,6 +237,10 @@
 
 - (NSRange)visibleSectionsInRect:(CGRect)rect
 {
+    if (self.sectionRects.count == 0)
+    {
+        return NSMakeRange(NSNotFound, 0);
+    }
     NSInteger first = [self.sectionRects indexOfObject:[NSValue valueWithCGRect:rect] inSortedRange:NSMakeRange(0, self.sectionRects.count) options:NSBinarySearchingInsertionIndex usingComparator:^NSComparisonResult(NSValue *rectValue1, NSValue *rectValue2) {
         return [@([rectValue1 CGRectValue].origin.x) compare:@([rectValue2 CGRectValue].origin.x)];
     }];
@@ -248,7 +252,7 @@
     
     first = MAX(first - 1, 0);
     
-    NSInteger last = MIN(first + 1, self.sectionRects.count - 1);
+    NSInteger last = MIN(first + 1, (NSInteger)(self.sectionRects.count) - 1);
     rect = [self.sectionRects[last] CGRectValue];
     
     while (last < self.sectionRects.count && CGRectIntersectsRect(self.bounds, [self.sectionRects[last] CGRectValue]))
