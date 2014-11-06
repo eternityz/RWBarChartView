@@ -136,4 +136,9 @@
  */
 - (void)reloadData;
 
+/**
+ *  Scroll to a specific bar.
+ */
+- (void)scrollToBarAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated;
+
 @end

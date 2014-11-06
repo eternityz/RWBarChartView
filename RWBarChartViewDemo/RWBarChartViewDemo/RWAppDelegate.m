@@ -20,7 +20,9 @@
     self.window.backgroundColor = [UIColor blackColor];
     
     RWDemoViewController *vc = [[RWDemoViewController alloc] initWithNibName:nil bundle:nil];
-    self.window.rootViewController = vc;
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
+    nav.navigationBar.translucent = NO;
+    self.window.rootViewController = nav;
     
     [self.window makeKeyAndVisible];
     

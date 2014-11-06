@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name         = "RWBarChartView"
-  s.version      = "1.1.0"
+  s.version      = "1.2.0"
   s.summary      = "Scrollable chart view for bar graphs. "
 
   s.description  = <<-DESC
@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
 
   s.ios.deployment_target = '7.0'
 
-  s.source       = { :git => "https://github.com/eternityz/RWBarChartView.git", :tag => "1.1.0" }
+  s.source       = { :git => "https://github.com/eternityz/RWBarChartView.git", :tag => "1.2.0" }
 
   s.source_files  = 'RWBarChartView', 'RWBarChartView/**/*.{h,m}'
 

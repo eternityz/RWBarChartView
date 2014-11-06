@@ -19,6 +19,8 @@
 @property (nonatomic, strong) RWBarChartView *singleChartView;
 @property (nonatomic, strong) RWBarChartView *statChartView;
 
+@property (nonatomic, strong) NSIndexPath *indexPathToScroll;
+
 @end
 
 @implementation RWDemoViewController
@@ -127,6 +129,12 @@
     self.singleChartView.scrollViewDelegate = self;
 }
 
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    [self updateScrollButton];
+}
+
 - (void)viewWillLayoutSubviews
 {
     [super viewWillLayoutSubviews];
@@ -195,6 +203,30 @@
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
     NSLog(@"scrollViewDidEndDragging");
+}
+
+- (NSIndexPath *)indexPathToScroll
+{
+    if (!_indexPathToScroll)
+    {
+        NSInteger section = arc4random() % self.itemCounts.count;
+        NSInteger item = arc4random() % [self.itemCounts[section] integerValue];
+        _indexPathToScroll = [NSIndexPath indexPathForItem:item inSection:section];
+    }
+    return _indexPathToScroll;
+}
+
+- (void)updateScrollButton
+{
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Scroll To %ld-%ld", (long)self.indexPathToScroll.section, (long)self.indexPathToScroll.item] style:UIBarButtonItemStylePlain target:self action:@selector(scrollToBar)];
+}
+
+- (void)scrollToBar
+{
+    [self.singleChartView scrollToBarAtIndexPath:self.indexPathToScroll animated:YES];
+    [self.statChartView scrollToBarAtIndexPath:self.indexPathToScroll animated:YES];
+    self.indexPathToScroll = nil;
+    [self updateScrollButton];
 }
 
 @end

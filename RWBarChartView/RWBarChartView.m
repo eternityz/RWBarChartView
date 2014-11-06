@@ -587,6 +587,22 @@
     }
 }
 
+- (void)scrollToBarAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated
+{
+    CGRect barFrame = [self frameForBarAtIndexPath:indexPath];
+    CGFloat barCenterX = CGRectGetMidX(barFrame);
+    
+    // let barCenterX = [self highlightX], find origin.x
+    // highlightX = x + C1 + C2 * (x / C3) = x * (1 + C2 / C3) + C1
+    // x = highlightX - C1 / (1 + C2 / C3)
+    
+    CGFloat w = CGRectGetWidth(self.bounds);
+    CGFloat x = (barCenterX - (self.fadingAreaWidth + self.contentHorizontalMargin + [self leftIndicatorPadding] + self.barWidth / 2.0))
+    / (1 + (w - self.lastSectionGap - [self rightIndicatorPadding] - [self leftIndicatorPadding] - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) / (self.contentSize.width - w));
+    
+    [self setContentOffset:CGPointMake(x, 0) animated:animated];
+}
+
 @end
 
 @implementation RWBarChartItem
