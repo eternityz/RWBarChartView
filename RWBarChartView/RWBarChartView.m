@@ -26,6 +26,7 @@
 @property (nonatomic, assign) CGFloat rightIndicatorPadding;
 @property (nonatomic, strong) NSMutableDictionary *sectionTitleSizeCache; // @(section) -> NSValue with CGSize
 @property (nonatomic, strong) NSCache *itemCache;
+@property (nonatomic, strong) NSIndexPath *lastItemIndexPath;
 
 @end
 
@@ -199,6 +200,7 @@
     
     CGFloat width = [self leftIndicatorPadding] + self.fadingAreaWidth;
     NSMutableArray *sectionRects = [NSMutableArray array];
+    self.lastItemIndexPath = nil;
     for (NSInteger isec = 0; isec < [self.dataSource numberOfSectionsInBarChartView:self]; ++isec)
     {
         NSInteger nItems = [self.dataSource barChartView:self numberOfBarsInSection:isec];
@@ -206,6 +208,7 @@
         if (nItems > 0)
         {
             secWidth += (nItems - 1) * [self barPadding];
+            self.lastItemIndexPath = [NSIndexPath indexPathForItem:nItems - 1 inSection:isec];
         }
         
         CGFloat headerWidth = [self headerWidthInSection:isec];
@@ -228,10 +231,18 @@
     
     self.sectionRects = sectionRects;
     
-    self.contentSize = CGSizeMake(width, self.bounds.size.height);
+    CGFloat contentWidth = width;
+    if (contentWidth < CGRectGetWidth(self.bounds) * 1.5) {
+        contentWidth += CGRectGetWidth(self.bounds);
+    }
+    self.contentSize = CGSizeMake(contentWidth, self.bounds.size.height);
     self.contentInset = UIEdgeInsetsMake(0, self.contentHorizontalMargin, 0, self.contentHorizontalMargin);
     
-    [self setContentOffset:CGPointMake(width - self.bounds.size.width + self.contentHorizontalMargin, 0)];
+    if (self.lastItemIndexPath) {
+        [self setContentOffset:CGPointMake([self scrollOffsetForBarAtIndexPath:self.lastItemIndexPath], 0)];
+    } else {
+        [self setContentOffset:CGPointMake(width - self.bounds.size.width + self.contentHorizontalMargin, 0)];
+    }
     [self setNeedsDisplay];
 }
 
@@ -587,8 +598,7 @@
     }
 }
 
-- (void)scrollToBarAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated
-{
+- (CGFloat)scrollOffsetForBarAtIndexPath:(NSIndexPath *)indexPath {
     CGRect barFrame = [self frameForBarAtIndexPath:indexPath];
     CGFloat barCenterX = CGRectGetMidX(barFrame);
     
@@ -600,7 +610,51 @@
     CGFloat x = (barCenterX - (self.fadingAreaWidth + self.contentHorizontalMargin + [self leftIndicatorPadding] + self.barWidth / 2.0))
     / (1 + (w - self.lastSectionGap - [self rightIndicatorPadding] - [self leftIndicatorPadding] - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) / (self.contentSize.width - w));
     
-    [self setContentOffset:CGPointMake(x, 0) animated:animated];
+    return x;
+}
+
+- (void)scrollToBarAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated
+{
+    [self setContentOffset:CGPointMake([self scrollOffsetForBarAtIndexPath:indexPath], 0) animated:animated];
+}
+
+- (void)adjustContentOffset {
+    BOOL adjusted = NO;
+    CGFloat rightBound = [self scrollOffsetForBarAtIndexPath:self.lastItemIndexPath];
+    CGFloat leftBound = [self scrollOffsetForBarAtIndexPath:[NSIndexPath indexPathForItem:0 inSection:0]];
+    CGPoint newOffset = self.contentOffset;
+    if (self.lastItemIndexPath && self.contentOffset.x > rightBound) {
+        newOffset.x = rightBound;
+        adjusted = YES;
+    }
+    if (newOffset.x < leftBound) {
+        newOffset.x = leftBound;
+        adjusted = YES;
+    }
+    
+    if (adjusted) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self setContentOffset:newOffset animated:YES];
+        });
+    }
+}
+
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate {
+    if (!decelerate) {
+        [self adjustContentOffset];
+    }
+    
+    if ([self.scrollViewDelegate respondsToSelector:@selector(scrollViewDidEndDragging:willDecelerate:)]) {
+        [self.scrollViewDelegate scrollViewDidEndDragging:scrollView willDecelerate:decelerate];
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    [self adjustContentOffset];
+    
+    if ([self.scrollViewDelegate respondsToSelector:@selector(scrollViewDidEndDecelerating:)]) {
+        [self.scrollViewDelegate scrollViewDidEndDecelerating:scrollView];
+    }
 }
 
 @end

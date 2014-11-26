@@ -120,6 +120,9 @@
     self.statChartView.dataSource = self;
     self.statChartView.barWidth = 25;
     
+    self.singleChartView.alwaysBounceHorizontal = YES;
+    self.statChartView.alwaysBounceHorizontal = YES;
+    
     self.singleChartView.backgroundColor = [UIColor colorWithWhite:0.3 alpha:1];
     self.statChartView.backgroundColor = [UIColor colorWithWhite:0.3 alpha:1];
     
