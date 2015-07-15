@@ -7,7 +7,7 @@ A scrollable, highly customizable and easy to use charting view for bar graphs. 
     <img src="https://raw.github.com/eternityz/RWBarChartView/master/Screenshots/demo.gif" />
 </p>
 
-[Demo Video](http://zhangbin.cc/assets/2014-06-19-RWBarChartView/demo.mp4)
+[Demo Video](http://zhangbin.cc/posts/2014-06-19-RWBarChartView/demo.mp4)
 
 ## Features
 
