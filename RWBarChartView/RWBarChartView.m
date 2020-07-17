@@ -175,7 +175,7 @@
     return _rightIndicatorPadding;
 }
 
-- (void)reloadData
+- (void)reloadDataWithoutUpdatingScrollOffset
 {
     self.showsHorizontalScrollIndicator = ![self.dataSource shouldShowItemTextForBarChartView:self];
     [self.itemCache removeAllObjects];
@@ -238,12 +238,16 @@
     self.contentSize = CGSizeMake(contentWidth, self.bounds.size.height);
     self.contentInset = UIEdgeInsetsMake(0, self.contentHorizontalMargin, 0, self.contentHorizontalMargin);
     
+    [self setNeedsDisplay];
+}
+
+- (void)reloadData {
+    [self reloadDataWithoutUpdatingScrollOffset];
     if (self.lastItemIndexPath) {
         [self setContentOffset:CGPointMake([self scrollOffsetForBarAtIndexPath:self.lastItemIndexPath], 0)];
     } else {
-        [self setContentOffset:CGPointMake(width - self.bounds.size.width + self.contentHorizontalMargin, 0)];
+        [self setContentOffset:CGPointMake(self.contentSize.width - self.bounds.size.width + self.contentHorizontalMargin, 0)];
     }
-    [self setNeedsDisplay];
 }
 
 - (NSRange)visibleSectionsInRect:(CGRect)rect

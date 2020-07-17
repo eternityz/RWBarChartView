@@ -137,6 +137,11 @@
 - (void)reloadData;
 
 /**
+ *  Refresh the chart view without changing scroll position.
+ */
+- (void)reloadDataWithoutUpdatingScrollOffset;
+
+/**
  *  Scroll to a specific bar.
  */
 - (void)scrollToBarAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated;
