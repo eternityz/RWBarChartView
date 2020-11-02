@@ -65,7 +65,7 @@
                     }
                     
                     RWBarChartItem *singleItem = [RWBarChartItem itemWithSingleSegmentOfRatio:ratio color:color];
-                    singleItem.text = [NSString stringWithFormat:@"Text %ld-%ld ", (long)indexPath.section, (long)indexPath.item];
+                    singleItem.text = [NSString stringWithFormat:@"Sample Text %ld-%ld ", (long)indexPath.section, (long)indexPath.item];
                     singleItems[indexPath] = singleItem;
                 }
                 
@@ -196,8 +196,8 @@
         return NO;
     }
     
-    *axisRatios = @[@(0.25), @(0.50), @(0.75), @(1.0)];
-    *axisLabels = @[@"25%", @"50%", @"75%", @"100%"];
+    *axisRatios = @[@(0), @(0.25), @(0.50), @(0.75), @(1.0)];
+    *axisLabels = @[@"0", @"25%", @"50%", @"75%", @"100%"];
     
     return YES;
 }

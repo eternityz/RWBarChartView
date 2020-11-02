@@ -22,8 +22,6 @@
 @property (nonatomic, assign) CGFloat needleLength;
 @property (nonatomic, assign) CGFloat needlePadding;
 @property (nonatomic, assign) CGFloat lastSectionGap;
-@property (nonatomic, assign) CGFloat leftIndicatorPadding;
-@property (nonatomic, assign) CGFloat rightIndicatorPadding;
 @property (nonatomic, strong) NSMutableDictionary *sectionTitleSizeCache; // @(section) -> NSValue with CGSize
 @property (nonatomic, strong) NSCache *itemCache;
 @property (nonatomic, strong) NSIndexPath *lastItemIndexPath;
@@ -114,67 +112,6 @@
     return titleSize.width + 2 * self.sectionTitleTextHorizontalMargin + 1;
 }
 
-- (CGFloat)leftIndicatorPadding
-{
-    if (_leftIndicatorPadding >= 0)
-    {
-        return _leftIndicatorPadding;
-    }
-    CGFloat padding = 0;
-    
-    if ([self.dataSource numberOfSectionsInBarChartView:self] <= 0)
-    {
-        return padding;
-    }
-    
-    if ([self.dataSource barChartView:self numberOfBarsInSection:0] <= 0)
-    {
-        return padding;
-    }
-    
-    NSIndexPath *indexPath = [NSIndexPath indexPathForItem:0 inSection:0];
-    id<RWBarChartItemProtocol> lastItem = [self.dataSource barChartView:self barChartItemAtIndexPath:indexPath];
-    CGSize textSize = [self highlightTextSizeForText:[lastItem text]];
-    
-    padding = MAX(padding, textSize.width / 2);
-    
-    _leftIndicatorPadding = padding;
-    
-    return _leftIndicatorPadding;
-}
-
-- (CGFloat)rightIndicatorPadding
-{
-    if (_rightIndicatorPadding >= 0)
-    {
-        return _rightIndicatorPadding;
-    }
-    
-    CGFloat padding = 0; // CGRectGetWidth(self.bounds) / 3.0;
-    
-    
-    // last item size
-    NSInteger section = [self.dataSource numberOfSectionsInBarChartView:self] - 1;
-    if (section < 0)
-    {
-        return padding;
-    }
-    NSInteger item = [self.dataSource barChartView:self numberOfBarsInSection:section] - 1;
-    if (item < 0)
-    {
-        return padding;
-    }
-    
-    NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
-    id<RWBarChartItemProtocol> lastItem = [self.dataSource barChartView:self barChartItemAtIndexPath:indexPath];
-    CGSize textSize = [self highlightTextSizeForText:[lastItem text]];
-    
-    padding = MAX(padding, textSize.width / 2);
-    
-    _rightIndicatorPadding = padding;
-    return _rightIndicatorPadding;
-}
-
 - (void)reloadDataWithoutUpdatingScrollOffset
 {
     self.showsHorizontalScrollIndicator = ![self.dataSource shouldShowItemTextForBarChartView:self];
@@ -193,12 +130,10 @@
     // will be updated on demand
     self.sectionTitleAreaHeight = -HUGE_VALF;
     self.itemTextAreaHeight = -HUGE_VALF;
-    self.leftIndicatorPadding = -HUGE_VALF;
-    self.rightIndicatorPadding = -HUGE_VALF;
-    
+
     self.sectionTitleSizeCache = [NSMutableDictionary dictionary];
     
-    CGFloat width = [self leftIndicatorPadding] + self.fadingAreaWidth;
+    CGFloat width = self.fadingAreaWidth;
     NSMutableArray *sectionRects = [NSMutableArray array];
     self.lastItemIndexPath = nil;
     for (NSInteger isec = 0; isec < [self.dataSource numberOfSectionsInBarChartView:self]; ++isec)
@@ -226,8 +161,6 @@
         width += secWidth;
         
     }
-    
-    width += [self rightIndicatorPadding];
     
     self.sectionRects = sectionRects;
     
@@ -293,10 +226,7 @@
     CGFloat w = CGRectGetWidth(self.bounds);
     CGFloat progress = self.bounds.origin.x / (self.contentSize.width - w);
     
-    CGFloat x = self.bounds.origin.x + self.fadingAreaWidth + self.contentHorizontalMargin + [self leftIndicatorPadding] + self.barWidth / 2.0 + (w - self.lastSectionGap - [self rightIndicatorPadding] - [self leftIndicatorPadding] - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) * progress;
-    
-    // x = MAX(x, [self leftIndicatorPadding] + self.barWidth / 2.0);
-    // x = MIN(x, self.contentSize.width - [self rightIndicatorPadding] - self.barWidth / 2.0 - self.lastSectionGap);
+    CGFloat x = self.bounds.origin.x + self.fadingAreaWidth + self.contentHorizontalMargin + self.barWidth / 2.0 + (w - self.lastSectionGap - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) * progress;
     
     return x;
 }
@@ -500,8 +430,8 @@
         return;
     }
     
-    CGContextSetStrokeColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
-    CGContextStrokeRect(ctx, barFrame);
+    // CGContextSetStrokeColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
+    // CGContextStrokeRect(ctx, barFrame);
     
     
     CGSize textSize = [self highlightTextSizeForText:text];
@@ -514,15 +444,23 @@
     bgRect.origin.y = needle.y + self.needleLength;
     bgRect.size.height = [self itemTextAreaHeight] - self.needleLength - self.needlePadding;
     
+    bgRect.origin.x = MIN(bgRect.origin.x, self.contentSize.width - bgRect.size.width);
+    bgRect.origin.x = MAX(0, bgRect.origin.x);
+    
+    CGFloat roundedRadius = 2.0;
+    CGFloat needleWidth = MAX(self.barWidth - 2 * roundedRadius, 1.0);
+    
+    needle.x = MIN(needle.x, CGRectGetMaxX(bgRect) - needleWidth / 2.0 - roundedRadius);
+    needle.x = MAX(needle.x, needleWidth / 2.0 + roundedRadius);
     
     CGContextBeginPath(ctx);
     
     CGContextMoveToPoint(ctx, needle.x, needle.y);
-    CGContextAddLineToPoint(ctx, needle.x - self.barWidth / 2.0, needle.y + self.needleLength);
-    CGContextAddLineToPoint(ctx, needle.x + self.barWidth / 2.0, needle.y + self.needleLength);
+    CGContextAddLineToPoint(ctx, needle.x - needleWidth / 2.0, needle.y + self.needleLength);
+    CGContextAddLineToPoint(ctx, needle.x + needleWidth / 2.0, needle.y + self.needleLength);
     CGContextAddLineToPoint(ctx, needle.x, needle.y);
     
-    [self addRoundedRect:bgRect withRadius:3.0 context:ctx];
+    [self addRoundedRect:bgRect withRadius:roundedRadius context:ctx];
     
     CGContextClosePath(ctx);
     CGContextSetFillColorWithColor(ctx, self.itemTextBackgroundColor.CGColor);
@@ -556,6 +494,7 @@
         NSString *label = axisLabels[idx];
         CGSize labelSize = [label sizeWithAttributes:attrs];
         CGPoint p = CGPointMake(CGRectGetMinX(rect) + self.contentHorizontalMargin, y + h * (1 - ratio) - labelSize.height / 2);
+        p.y = MIN(p.y, self.contentSize.height - labelSize.height);
         [label drawAtPoint:p withAttributes:attrs];
     }
 }
@@ -611,8 +550,8 @@
     // x = highlightX - C1 / (1 + C2 / C3)
     
     CGFloat w = CGRectGetWidth(self.bounds);
-    CGFloat x = (barCenterX - (self.fadingAreaWidth + self.contentHorizontalMargin + [self leftIndicatorPadding] + self.barWidth / 2.0))
-    / (1 + (w - self.lastSectionGap - [self rightIndicatorPadding] - [self leftIndicatorPadding] - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) / (self.contentSize.width - w));
+    CGFloat x = (barCenterX - (self.fadingAreaWidth + self.contentHorizontalMargin + self.barWidth / 2.0))
+    / (1 + (w - self.lastSectionGap - self.barWidth - 2 * self.contentHorizontalMargin - self.fadingAreaWidth) / (self.contentSize.width - w));
     
     return x;
 }
