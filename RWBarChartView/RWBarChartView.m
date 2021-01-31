@@ -252,7 +252,11 @@
 
 - (CGRect)frameForBarAtIndexPath:(NSIndexPath *)indexPath
 {
-    CGRect sectionRect = [self.sectionRects[indexPath.section] CGRectValue];
+    __auto_type rects = self.sectionRects;
+    if (indexPath.section < 0 || indexPath.section >= rects.count) {
+        return CGRectZero;
+    }
+    CGRect sectionRect = [rects[indexPath.section] CGRectValue];
     
     CGRect rect = CGRectZero;
     rect.size.width = self.barWidth;
@@ -444,8 +448,8 @@
     bgRect.origin.y = needle.y + self.needleLength;
     bgRect.size.height = [self itemTextAreaHeight] - self.needleLength - self.needlePadding;
     
-    bgRect.origin.x = MIN(bgRect.origin.x, self.contentSize.width - bgRect.size.width);
-    bgRect.origin.x = MAX(0, bgRect.origin.x);
+    bgRect.origin.x = MIN(bgRect.origin.x, MIN(self.contentSize.width, CGRectGetMaxX(self.bounds)) - bgRect.size.width);
+    bgRect.origin.x = MAX(bgRect.origin.x, MAX(0, CGRectGetMinX(self.bounds)));
     
     CGFloat roundedRadius = 2.0;
     CGFloat needleWidth = MAX(self.barWidth - 2 * roundedRadius, 1.0);
